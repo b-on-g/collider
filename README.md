@@ -294,7 +294,69 @@ $mol_wire_log.watch( ()=> $my_app.Root(0).dom_tree() )
 
 Solid добавил ReactiveScript и TSRX. Это компилируемые диалекты, чтобы агентам было проще писать реактивный код. Оба экспериментальные.
 
-В $mol отдельный язык описания компонентов есть давно, и он основной. `view.tree` компилируется в TS-класс с типами:
+**ReactiveScript** ([ryansolid/reactivescript](https://github.com/ryansolid/reactivescript), 0.1). Отдельный язык, файлы `.rx`, компилируется в обычный Solid 2.0. Имён три вида: `source x := 0` это состояние, писать в него можно только через `:=`. `y = x * 2` это уравнение, оно пересчитывается само. Записи разрешены только в обработчиках и `action`. Пример из README:
+
+```rx
+export default component Counter() {
+  source count := 0
+  double = count * 2
+
+  <button onClick={() => { count := count + 1 }}>{count} × 2 = {double}</button>
+}
+```
+
+Асинхронность — это `await` в уравнении. Компилятор требует границы ожидания и ошибки:
+
+```rx
+import pure { fetchUser } from "./api"
+
+export default component Profile() {
+  source id := 1
+  user = await fetchUser(id)
+
+  <section>
+    <button onClick={() => { id := id + 1 }}>Next</button>
+    {errored fallback(e) { <p>Couldn't load: {e.message}</p> } {
+      {loading fallback { <p>Loading…</p> } {
+        <h1>{user.name}</h1>
+      }}
+    }}
+  </section>
+}
+```
+
+Без `errored` код не компилируется:
+
+```
+profile.rx:10: error UNHANDLED_FAILURE [R-f-5] a reader of user.name (in <Profile>) can fail with Error and no catch or errored boundary above it ...
+```
+
+**TSRX** ([tsrx-org/tsrx](https://github.com/tsrx-org/tsrx), бета). Это не язык Solid, а расширение TSX сразу для нескольких рантаймов: React, Preact, Solid, Vue. Даёт `@{ … }` для кода рядом с разметкой, `@if`, `@for`, `@switch`, `@try` и `<style>` с областью видимости. Пример из README:
+
+```tsx
+export function TodoList({ items }: { items: Todo[] }) @{
+  const visibleItems = items.filter((item) => !item.hidden);
+
+  <>
+    <ul>
+      @for (const item of visibleItems; index i; key item.id) {
+        <li>{i + 1}. {item.title}</li>
+      } @empty {
+        <li>No todos yet</li>
+      }
+    </ul>
+
+    <style>
+      ul {
+        display: grid;
+        gap: 0.5rem;
+      }
+    </style>
+  </>
+}
+```
+
+В $mol отдельный язык описания компонентов есть давно, и он основной. `view.tree` компилируется в TS-класс с типами. Тот же счётчик:
 
 ```tree
 $my_counter $mol_view
@@ -315,6 +377,52 @@ export class $my_counter extends $.$my_counter {
 	}
 }
 ```
+
+Разделение `source` и уравнений из ReactiveScript здесь задаётся формой метода. Метод с `next` можно записать, без `next` он только вычисляется. Запись в вычисляемое свойство ловит тайпчек, потому что у метода нет параметра. Асинхронность не требует `await` и границ: `Profile` из пункта 1 пишется синхронно, а ожидание и ошибку вид показывает сам.
+
+Тот же `TodoList`:
+
+```tree
+$my_todo_list $mol_list
+	rows <= items_visible /$mol_view
+	Item* $mol_view
+		sub / <= item_title* \
+	Empty $mol_view
+		sub / \No todos yet
+```
+
+```ts
+export class $my_todo_list extends $.$my_todo_list {
+
+	items(): { id: string, title: string, hidden?: boolean }[] {
+		return []
+	}
+
+	@ $mol_mem
+	visible() {
+		return this.items().filter( item => !item.hidden )
+	}
+
+	items_visible() {
+		return this.visible().map( item => this.Item( item.id ) )
+	}
+
+	item_title( id: string ) {
+		const index = this.visible().findIndex( item => item.id === id )
+		return `${ index + 1 }. ${ this.visible()[ index ].title }`
+	}
+
+}
+```
+
+```ts
+$mol_style_define( $my_todo_list, {
+	display: 'grid',
+	gap: '0.5rem',
+} )
+```
+
+Ключ `key item.id` здесь — это ключ `Item*`. `@empty` писать не нужно: у `$mol_list` есть свой `Empty`, он показывается, когда `rows` пуст. Стили привязаны к классу компонента через атрибут `my_todo_list`, это и есть их область видимости.
 
 Главное свойство дерева: любое вложенное свойство любого компонента переопределяется у наследника одной строкой, без пропсов и без форка. Сам коллайдер так и сделан, `Source` из глубины `$hyoo_js_perf` заменён тремя строками:
 
