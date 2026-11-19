@@ -19447,6 +19447,26 @@ var $;
         `engine.batch( ()=> { B.value = 1; A.value = 1+{#}*2 } ) // H`,
         `engine.batch( ()=> { A.value = 2+{#}*2; B.value = 2 } ) // EH`,
     ].join('\n');
+    const cruzo_setup = [
+        `// https://cruzo.org`,
+        `const { AbstractService } = esm( 'cruzo@1' )`,
+        `const rx = new AbstractService`,
+        `const A = rx.newRx( 0 )`,
+        `const B = rx.newRx( 0 )`,
+        `const C = rx.newRxFunc( ( a, b )=> a%2 + b%2, A, B )`,
+        `const D = rx.newRxFunc( ( a, b )=> numbers.map( i => ({ x: i + a%2 - b%2 }) ), A, B )`,
+        `const E = rx.newRxFunc( ( c, a, d )=> hard( c + a + d[0].x, 'E' ), C, A, D )`,
+        `const F = rx.newRxFunc( ( d, b )=> hard( d[2].x || b, 'F' ), D, B )`,
+        `const G = rx.newRxFunc( ( c, e, d, f )=> c + ( c || e%2 ) + d[4].x + f, C, E, D, F )`,
+        `rx.newRxFunc( g => res.push( hard( g, 'H' ) ), G )`,
+        `rx.newRxFunc( g => res.push( g ), G )`,
+        `rx.newRxFunc( f => res.push( hard( f, 'J' ) ), F )`,
+    ].join('\n');
+    const cruzo_measure = [
+        `res.length = 3`,
+        `B.update( 1 ); A.update( 1+{#}*2 ) // EH`,
+        `A.update( 2+{#}*2 ); B.update( 2 ) // EH`,
+    ].join('\n');
     $.$bog_collider_preset = {
         title: '$mol vs SolidJS',
         prefix: [
@@ -19480,6 +19500,7 @@ var $;
             { title: '😵🍔 SolidJS 1', setup: solid1_setup, measure: solid1_measure },
             { title: '😵⏰ SolidJS 2', setup: solid2_setup, measure: solid2_measure },
             { title: '😵🍔 @pravosleva/reactive-engine', setup: engine_setup, measure: engine_measure },
+            { title: '🤯🍔 Cruzo', setup: cruzo_setup, measure: cruzo_measure },
         ],
     };
 })($ || ($ = {}));
@@ -24923,7 +24944,7 @@ var $;
         'empty link opens $mol vs Solid preset'($) {
             const app = $bog_collider.make({ $ });
             $mol_assert_equal(app.bench_title(), $bog_collider_preset.title);
-            $mol_assert_equal(app.titles(), ['🤓⏰ $mol_wire_solo', '😵⏰ $mol_wire_let', '😵🍔 SolidJS 1', '😵⏰ SolidJS 2', '😵🍔 @pravosleva/reactive-engine']);
+            $mol_assert_equal(app.titles(), ['🤓⏰ $mol_wire_solo', '😵⏰ $mol_wire_let', '😵🍔 SolidJS 1', '😵⏰ SolidJS 2', '😵🍔 @pravosleva/reactive-engine', '🤯🍔 Cruzo']);
             $mol_assert_equal(app.Case(3).sample().includes(`esm( 'solid-js@2' )`), true);
             $mol_assert_equal(app.Case(3).sample().includes(`$mol_assert_like( res,`), true);
         },
