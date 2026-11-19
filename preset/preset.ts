@@ -60,6 +60,39 @@ namespace $ {
 		`A(2+{#}*2); B(2); /*//*/ tick() // EH`,
 	].join( '\n' )
 
+	const wire_await_setup = [
+		`// https://github.com/hyoo-ru/mam_mol/tree/master/wire`,
+		`const { $mol_wire_solo: mem } = esm( 'mol_wire_lib/web' ).default`,
+		`class App extends $mol_object {`,
+		`	/*@mem*/ A( next = 0 ) { return next }`,
+		`	/*@mem*/ B( next = 0 ) { return next }`,
+		`	/*@mem*/ C() { return this.A()%2 + this.B()%2 }`,
+		`	/*@mem*/ D() { return numbers.map( i => ({ x: i + this.A()%2 - this.B()%2 }) ) }`,
+		`	/*@mem*/ E() { return hard( this.C() + this.A() + this.D()[0].x, 'E' ) }`,
+		`	/*@mem*/ F() { return hard( this.D()[2].x || this.B(), 'F' ) }`,
+		`	/*@mem*/ G() { return this.C() + ( this.C() || this.E()%2 ) + this.D()[4].x + this.F() }`,
+		`	/*@mem*/ H() { res.push( hard( this.G(), 'H' ) ) }`,
+		`	/*@mem*/ I() { res.push( this.G() ) }`,
+		`	/*@mem*/ J() { res.push( hard( this.F(), 'J' ) ) }`,
+		`	/*@mem*/ render() { this.H(); this.I(); this.J() }`,
+		`}`,
+		`/*//*/ mem( App.prototype, 'A' ); mem( App.prototype, 'B' )`,
+		`/*//*/ mem( App.prototype, 'C' ); mem( App.prototype, 'D' )`,
+		`/*//*/ mem( App.prototype, 'E' ); mem( App.prototype, 'F' )`,
+		`/*//*/ mem( App.prototype, 'G' ); mem( App.prototype, 'H' )`,
+		`/*//*/ mem( App.prototype, 'I' ); mem( App.prototype, 'J' )`,
+		`/*//*/ mem( App.prototype, 'render' )`,
+		`const app = new App`,
+		`app.render()`,
+		`await settle()`,
+	].join( '\n' )
+
+	const wire_await_measure = [
+		`res.length = 3`,
+		`app.B(1); app.A(1+{#}*2); await settle() // H`,
+		`app.A(2+{#}*2); app.B(2); await settle() // EH`,
+	].join( '\n' )
+
 	const solid1_setup = [
 		`// https://www.solidjs.com/docs/latest/api`,
 		`const { createSignal, createMemo, createEffect, batch } = esm( 'solid-js@1' )`,
@@ -107,6 +140,31 @@ namespace $ {
 		`setA(2+{#}*2); setB(2); flush() // EH`,
 	].join( '\n' )
 
+	const solid2_await_setup = [
+		`// https://www.solidjs.com/blog/solid-2-0-the-long-hold/`,
+		`const { createSignal, createMemo, createEffect, createRoot } = esm( 'solid-js@2' )`,
+		`const { $mol_compare_deep: equals } = esm( 'mol_compare_deep/web' ).default`,
+		`const [ A, setA ] = createSignal(0)`,
+		`const [ B, setB ] = createSignal(0)`,
+		`createRoot( ()=> {`,
+		`	const C = createMemo( ()=> A()%2 + B()%2 )`,
+		`	const D = createMemo( ()=> numbers.map( i => ({ x: i + A()%2 - B()%2 }) ), { equals } )`,
+		`	const E = createMemo( ()=> hard( C() + A() + D()[0].x, 'E' ) )`,
+		`	const F = createMemo( ()=> hard( D()[2].x || B(), 'F' ) )`,
+		`	const G = createMemo( ()=> C() + ( C() || E()%2 ) + D()[4].x + F() )`,
+		`	createEffect( G, g => { res.push( hard( g, 'H' ) ) } )`,
+		`	createEffect( G, g => { res.push( g ) } )`,
+		`	createEffect( F, f => { res.push( hard( f, 'J' ) ) } )`,
+		`} )`,
+		`await settle()`,
+	].join( '\n' )
+
+	const solid2_await_measure = [
+		`res.length = 3`,
+		`setB(1); setA(1+{#}*2); await settle() // EH`,
+		`setA(2+{#}*2); setB(2); await settle() // EH`,
+	].join( '\n' )
+
 	const engine_setup = [
 		`// https://www.npmjs.com/package/@pravosleva/reactive-engine`,
 		`const { ReactiveEngine } = esm( '@pravosleva/reactive-engine@3' )`,
@@ -143,12 +201,13 @@ namespace $ {
 		`rx.newRxFunc( g => res.push( hard( g, 'H' ) ), G )`,
 		`rx.newRxFunc( g => res.push( g ), G )`,
 		`rx.newRxFunc( f => res.push( hard( f, 'J' ) ), F )`,
+		`await settle()`,
 	].join( '\n' )
 
 	const cruzo_measure = [
 		`res.length = 3`,
-		`B.update( 1 ); A.update( 1+{#}*2 ) // EH`,
-		`A.update( 2+{#}*2 ); B.update( 2 ) // EH`,
+		`B.update( 1 ); A.update( 1+{#}*2 ); await settle() // FEJH`,
+		`A.update( 2+{#}*2 ); B.update( 2 ); await settle() // EFJH`,
 	].join( '\n' )
 
 	export const $bog_collider_preset = {
@@ -174,6 +233,12 @@ namespace $ {
 			`function esm( name ) {`,
 			`	return $mol_import.module( 'https://esm.sh/' + name )`,
 			`}`,
+			``,
+			`const settle = ()=> new Promise( done => {`,
+			`	const chan = new MessageChannel`,
+			`	chan.port1.onmessage = ()=> { chan.port1.close(); done() }`,
+			`	chan.port2.postMessage( null )`,
+			`} )`,
 		].join( '\n' ),
 
 		postfix: [
@@ -188,7 +253,9 @@ namespace $ {
 			{ title: '😵🍔 SolidJS 1', setup: solid1_setup, measure: solid1_measure },
 			{ title: '😵⏰ SolidJS 2', setup: solid2_setup, measure: solid2_measure },
 			{ title: '😵🍔 @pravosleva/reactive-engine', setup: engine_setup, measure: engine_measure },
-			{ title: '🤯🍔 Cruzo', setup: cruzo_setup, measure: cruzo_measure },
+			{ title: '🤓⏳ $mol_wire_solo await', setup: wire_await_setup, measure: wire_await_measure },
+			{ title: '😵⏳ SolidJS 2 await', setup: solid2_await_setup, measure: solid2_await_measure },
+			{ title: '🤯⏳ Cruzo await', setup: cruzo_setup, measure: cruzo_measure },
 		],
 
 	}
