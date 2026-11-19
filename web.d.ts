@@ -8320,6 +8320,16 @@ declare namespace $.$$ {
         prefix(next?: string): string;
         postfix(next?: string): string;
         bench_title(next?: string): string;
+        measure_step(count: number, prefix: string, inner: string, postfix: string): {
+            total: number;
+            time: any;
+            mem: any;
+        };
+        measure_step_async(count: number, prefix: string, inner: string, postfix: string): Promise<{
+            total: number;
+            time: number;
+            mem: number;
+        }>;
     }
 }
 

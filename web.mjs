@@ -18940,6 +18940,37 @@ var $;
         `B(1); A(1+{#}*2); /*//*/ tick() // H`,
         `A(2+{#}*2); B(2); /*//*/ tick() // EH`,
     ].join('\n');
+    const wire_await_setup = [
+        `// https://github.com/hyoo-ru/mam_mol/tree/master/wire`,
+        `const { $mol_wire_solo: mem } = esm( 'mol_wire_lib/web' ).default`,
+        `class App extends $mol_object {`,
+        `	/*@mem*/ A( next = 0 ) { return next }`,
+        `	/*@mem*/ B( next = 0 ) { return next }`,
+        `	/*@mem*/ C() { return this.A()%2 + this.B()%2 }`,
+        `	/*@mem*/ D() { return numbers.map( i => ({ x: i + this.A()%2 - this.B()%2 }) ) }`,
+        `	/*@mem*/ E() { return hard( this.C() + this.A() + this.D()[0].x, 'E' ) }`,
+        `	/*@mem*/ F() { return hard( this.D()[2].x || this.B(), 'F' ) }`,
+        `	/*@mem*/ G() { return this.C() + ( this.C() || this.E()%2 ) + this.D()[4].x + this.F() }`,
+        `	/*@mem*/ H() { res.push( hard( this.G(), 'H' ) ) }`,
+        `	/*@mem*/ I() { res.push( this.G() ) }`,
+        `	/*@mem*/ J() { res.push( hard( this.F(), 'J' ) ) }`,
+        `	/*@mem*/ render() { this.H(); this.I(); this.J() }`,
+        `}`,
+        `/*//*/ mem( App.prototype, 'A' ); mem( App.prototype, 'B' )`,
+        `/*//*/ mem( App.prototype, 'C' ); mem( App.prototype, 'D' )`,
+        `/*//*/ mem( App.prototype, 'E' ); mem( App.prototype, 'F' )`,
+        `/*//*/ mem( App.prototype, 'G' ); mem( App.prototype, 'H' )`,
+        `/*//*/ mem( App.prototype, 'I' ); mem( App.prototype, 'J' )`,
+        `/*//*/ mem( App.prototype, 'render' )`,
+        `const app = new App`,
+        `app.render()`,
+        `await settle()`,
+    ].join('\n');
+    const wire_await_measure = [
+        `res.length = 3`,
+        `app.B(1); app.A(1+{#}*2); await settle() // H`,
+        `app.A(2+{#}*2); app.B(2); await settle() // EH`,
+    ].join('\n');
     const solid1_setup = [
         `// https://www.solidjs.com/docs/latest/api`,
         `const { createSignal, createMemo, createEffect, batch } = esm( 'solid-js@1' )`,
@@ -18983,6 +19014,29 @@ var $;
         `setB(1); setA(1+{#}*2); flush() // EH`,
         `setA(2+{#}*2); setB(2); flush() // EH`,
     ].join('\n');
+    const solid2_await_setup = [
+        `// https://www.solidjs.com/blog/solid-2-0-the-long-hold/`,
+        `const { createSignal, createMemo, createEffect, createRoot } = esm( 'solid-js@2' )`,
+        `const { $mol_compare_deep: equals } = esm( 'mol_compare_deep/web' ).default`,
+        `const [ A, setA ] = createSignal(0)`,
+        `const [ B, setB ] = createSignal(0)`,
+        `createRoot( ()=> {`,
+        `	const C = createMemo( ()=> A()%2 + B()%2 )`,
+        `	const D = createMemo( ()=> numbers.map( i => ({ x: i + A()%2 - B()%2 }) ), { equals } )`,
+        `	const E = createMemo( ()=> hard( C() + A() + D()[0].x, 'E' ) )`,
+        `	const F = createMemo( ()=> hard( D()[2].x || B(), 'F' ) )`,
+        `	const G = createMemo( ()=> C() + ( C() || E()%2 ) + D()[4].x + F() )`,
+        `	createEffect( G, g => { res.push( hard( g, 'H' ) ) } )`,
+        `	createEffect( G, g => { res.push( g ) } )`,
+        `	createEffect( F, f => { res.push( hard( f, 'J' ) ) } )`,
+        `} )`,
+        `await settle()`,
+    ].join('\n');
+    const solid2_await_measure = [
+        `res.length = 3`,
+        `setB(1); setA(1+{#}*2); await settle() // EH`,
+        `setA(2+{#}*2); setB(2); await settle() // EH`,
+    ].join('\n');
     const engine_setup = [
         `// https://www.npmjs.com/package/@pravosleva/reactive-engine`,
         `const { ReactiveEngine } = esm( '@pravosleva/reactive-engine@3' )`,
@@ -19017,11 +19071,12 @@ var $;
         `rx.newRxFunc( g => res.push( hard( g, 'H' ) ), G )`,
         `rx.newRxFunc( g => res.push( g ), G )`,
         `rx.newRxFunc( f => res.push( hard( f, 'J' ) ), F )`,
+        `await settle()`,
     ].join('\n');
     const cruzo_measure = [
         `res.length = 3`,
-        `B.update( 1 ); A.update( 1+{#}*2 ) // EH`,
-        `A.update( 2+{#}*2 ); B.update( 2 ) // EH`,
+        `B.update( 1 ); A.update( 1+{#}*2 ); await settle() // FEJH`,
+        `A.update( 2+{#}*2 ); B.update( 2 ); await settle() // EFJH`,
     ].join('\n');
     $.$bog_collider_preset = {
         title: '$mol vs SolidJS',
@@ -19044,6 +19099,12 @@ var $;
             `function esm( name ) {`,
             `	return $mol_import.module( 'https://esm.sh/' + name )`,
             `}`,
+            ``,
+            `const settle = ()=> new Promise( done => {`,
+            `	const chan = new MessageChannel`,
+            `	chan.port1.onmessage = ()=> { chan.port1.close(); done() }`,
+            `	chan.port2.postMessage( null )`,
+            `} )`,
         ].join('\n'),
         postfix: [
             `$mol_assert_like( res,`,
@@ -19056,7 +19117,9 @@ var $;
             { title: '😵🍔 SolidJS 1', setup: solid1_setup, measure: solid1_measure },
             { title: '😵⏰ SolidJS 2', setup: solid2_setup, measure: solid2_measure },
             { title: '😵🍔 @pravosleva/reactive-engine', setup: engine_setup, measure: engine_measure },
-            { title: '🤯🍔 Cruzo', setup: cruzo_setup, measure: cruzo_measure },
+            { title: '🤓⏳ $mol_wire_solo await', setup: wire_await_setup, measure: wire_await_measure },
+            { title: '😵⏳ SolidJS 2 await', setup: solid2_await_setup, measure: solid2_await_measure },
+            { title: '🤯⏳ Cruzo await', setup: cruzo_setup, measure: cruzo_measure },
         ],
     };
 })($ || ($ = {}));
@@ -19111,7 +19174,50 @@ var $;
                     return super.bench_title(next);
                 return $bog_collider_preset.title;
             }
+            measure_step(count, prefix, inner, postfix) {
+                const perf = $hyoo_js_perf.prototype;
+                if (!/\bawait\b/.test(prefix + inner))
+                    return perf.measure_step.call(this, count, prefix, inner, postfix);
+                const token = perf.token.call(this);
+                const hot_def = `const case_${token} = iter_${token} =>`;
+                const hot_call = `case_${token}({#})`;
+                for (const [, name] of (prefix + inner).matchAll(/esm\(\s*'([^']+)'\s*\)/g)) {
+                    this.$.$mol_import.module('https://esm.sh/' + name);
+                }
+                this.$.$mol_wait_rest();
+                return $mol_wire_sync(this).measure_step_async(count, prefix.replace(hot_def, `const case_${token} = async iter_${token} =>`), inner === hot_call ? `await ${hot_call}` : inner, postfix);
+            }
+            async measure_step_async(count, prefix, inner, postfix) {
+                const token = $hyoo_js_perf.prototype.token.call(this);
+                prefix = prefix.replace(/\{#\}/g, `${count}`);
+                postfix = postfix.replace(/\{#\}/g, `${count}`);
+                inner = Array.from({ length: count }, (_, i) => inner.replace(/\{#\}/g, `${i}`)).join(';\n');
+                const source = [
+                    `let total_${token} = -performance.now()`,
+                    prefix,
+                    `if( window.gc ) gc(), gc()`,
+                    `let mem_${token} = -performance.memory?.usedJSHeapSize ?? 0`,
+                    `let time_${token} = -performance.now()`,
+                    inner,
+                    `time_${token} += performance.now()`,
+                    postfix,
+                    `if( window.gc ) gc(), gc()`,
+                    `mem_${token} += performance.memory?.usedJSHeapSize ?? 0`,
+                    `total_${token} += performance.now()`,
+                    `return { total: total_${token}, time: time_${token}, mem: window.gc ? mem_${token} : 0 }`,
+                ].join(';\n');
+                const Async = (async () => { }).constructor;
+                const func = new Async('', source);
+                const backup = $mol_wire_auto();
+                $mol_wire_auto(null);
+                const promise = func();
+                $mol_wire_auto(backup);
+                return await promise;
+            }
         }
+        __decorate([
+            $mol_action
+        ], $bog_collider.prototype, "measure_step", null);
         $$.$bog_collider = $bog_collider;
     })($$ = $.$$ || ($.$$ = {}));
 })($ || ($ = {}));
