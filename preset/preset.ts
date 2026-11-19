@@ -107,6 +107,28 @@ namespace $ {
 		`setA(2+{#}*2); setB(2); flush() // EH`,
 	].join( '\n' )
 
+	const engine_setup = [
+		`// https://www.npmjs.com/package/@pravosleva/reactive-engine`,
+		`const { ReactiveEngine } = esm( '@pravosleva/reactive-engine@3' )`,
+		`const engine = new ReactiveEngine`,
+		`const A = engine.signal( 0 )`,
+		`const B = engine.signal( 0 )`,
+		`const C = engine.computed( ()=> A.value%2 + B.value%2 )`,
+		`const D = engine.computed( ()=> numbers.map( i => ({ x: i + A.value%2 - B.value%2 }) ) )`,
+		`const E = engine.computed( ()=> hard( C.value + A.value + D.value[0].x, 'E' ) )`,
+		`const F = engine.computed( ()=> hard( D.value[2].x || B.value, 'F' ) )`,
+		`const G = engine.computed( ()=> C.value + ( C.value || E.value%2 ) + D.value[4].x + F.value )`,
+		`engine.effect( ()=> { res.push( hard( G.value, 'H' ) ) } )`,
+		`engine.effect( ()=> { res.push( G.value ) } )`,
+		`engine.effect( ()=> { res.push( hard( F.value, 'J' ) ) } )`,
+	].join( '\n' )
+
+	const engine_measure = [
+		`res.length = 3`,
+		`engine.batch( ()=> { B.value = 1; A.value = 1+{#}*2 } ) // H`,
+		`engine.batch( ()=> { A.value = 2+{#}*2; B.value = 2 } ) // EH`,
+	].join( '\n' )
+
 	export const $bog_collider_preset = {
 
 		title: '$mol vs SolidJS',
@@ -143,6 +165,7 @@ namespace $ {
 			{ title: '😵⏰ $mol_wire_let', setup: wire_let_setup, measure: wire_let_measure },
 			{ title: '😵🍔 SolidJS 1', setup: solid1_setup, measure: solid1_measure },
 			{ title: '😵⏰ SolidJS 2', setup: solid2_setup, measure: solid2_measure },
+			{ title: '😵🍔 @pravosleva/reactive-engine', setup: engine_setup, measure: engine_measure },
 		],
 
 	}
