@@ -4273,6 +4273,7 @@ var $;
             return next ?? $mol_wire_sync(native).persisted();
         }
         static estimate(next) {
+            $mol_mem_persist();
             const res = $mol_wire_sync(this.native() ?? {}).estimate();
             new this.$.$mol_after_timeout(1000, $mol_wire_async(() => this.estimate(null)));
             return res;
@@ -5790,26 +5791,21 @@ var $;
                 const anchor_rect = this.Anchor()?.view_rect();
                 if (!anchor_rect)
                     return null;
+                const size = this.$.$mol_window.size();
                 const offset = this.offset();
                 const align = this.align();
                 const width = self_rect?.width ?? 0;
                 const height = self_rect?.height ?? 0;
-                let left = Math.floor((prev?.left ?? 0)
-                    - (self_rect?.left ?? 0)
-                    + width * align[0]
-                    + (anchor_rect?.left ?? 0)
-                    + offset[0] * (anchor_rect?.width ?? 0));
-                let top = Math.floor((prev?.top ?? 0)
-                    - (self_rect?.top ?? 0)
-                    + height * align[1]
-                    + (anchor_rect?.top ?? 0)
-                    + offset[1] * (anchor_rect?.height ?? 0));
-                const size = this.$.$mol_window.size();
-                const rtl = this.locale().direction() === 'rtl';
-                const min = rtl ? -size.width : 0;
-                const max = rtl ? 0 : size.width - width;
-                left = Math.max(min, Math.min(left, max));
-                top = Math.max(0, Math.min(top, size.height - height));
+                let left = Math.floor(+width * align[0]
+                    + anchor_rect.left
+                    + offset[0] * anchor_rect.width);
+                const base_left = (prev?.left ?? 0) - (self_rect?.left ?? 0);
+                left = Math.max(0, Math.min(left, size.width - width)) + base_left;
+                let top = Math.floor(+height * align[1]
+                    + anchor_rect.top
+                    + offset[1] * anchor_rect.height);
+                const base_top = (prev?.top ?? 0) - (self_rect?.top ?? 0);
+                top = Math.max(0, Math.min(top, size.height - height)) + base_top;
                 return { left, top };
             }
             locale() { return this.$.$mol_locale; }
@@ -18987,6 +18983,26 @@ var $;
         `setB(1); setA(1+{#}*2); flush() // EH`,
         `setA(2+{#}*2); setB(2); flush() // EH`,
     ].join('\n');
+    const engine_setup = [
+        `// https://www.npmjs.com/package/@pravosleva/reactive-engine`,
+        `const { ReactiveEngine } = esm( '@pravosleva/reactive-engine@3' )`,
+        `const engine = new ReactiveEngine`,
+        `const A = engine.signal( 0 )`,
+        `const B = engine.signal( 0 )`,
+        `const C = engine.computed( ()=> A.value%2 + B.value%2 )`,
+        `const D = engine.computed( ()=> numbers.map( i => ({ x: i + A.value%2 - B.value%2 }) ) )`,
+        `const E = engine.computed( ()=> hard( C.value + A.value + D.value[0].x, 'E' ) )`,
+        `const F = engine.computed( ()=> hard( D.value[2].x || B.value, 'F' ) )`,
+        `const G = engine.computed( ()=> C.value + ( C.value || E.value%2 ) + D.value[4].x + F.value )`,
+        `engine.effect( ()=> { res.push( hard( G.value, 'H' ) ) } )`,
+        `engine.effect( ()=> { res.push( G.value ) } )`,
+        `engine.effect( ()=> { res.push( hard( F.value, 'J' ) ) } )`,
+    ].join('\n');
+    const engine_measure = [
+        `res.length = 3`,
+        `engine.batch( ()=> { B.value = 1; A.value = 1+{#}*2 } ) // H`,
+        `engine.batch( ()=> { A.value = 2+{#}*2; B.value = 2 } ) // EH`,
+    ].join('\n');
     $.$bog_collider_preset = {
         title: '$mol vs SolidJS',
         prefix: [
@@ -19019,6 +19035,7 @@ var $;
             { title: '😵⏰ $mol_wire_let', setup: wire_let_setup, measure: wire_let_measure },
             { title: '😵🍔 SolidJS 1', setup: solid1_setup, measure: solid1_measure },
             { title: '😵⏰ SolidJS 2', setup: solid2_setup, measure: solid2_measure },
+            { title: '😵🍔 @pravosleva/reactive-engine', setup: engine_setup, measure: engine_measure },
         ],
     };
 })($ || ($ = {}));

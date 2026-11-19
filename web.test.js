@@ -2456,6 +2456,18 @@ var $;
 var $;
 (function ($) {
     $mol_test({
+        async 'storage level'() {
+            // prevent async in tests
+            await $mol_wire_async($mol_storage).level();
+        }
+    });
+})($ || ($ = {}));
+
+;
+"use strict";
+var $;
+(function ($) {
+    $mol_test({
         'local get set delete'() {
             var key = '$mol_state_local_test:' + Math.random();
             $mol_assert_equal($mol_state_local.value(key), null);
@@ -5204,7 +5216,7 @@ var $;
         'empty link opens $mol vs Solid preset'($) {
             const app = $bog_collider.make({ $ });
             $mol_assert_equal(app.bench_title(), $bog_collider_preset.title);
-            $mol_assert_equal(app.titles(), ['🤓⏰ $mol_wire_solo', '😵⏰ $mol_wire_let', '😵🍔 SolidJS 1', '😵⏰ SolidJS 2']);
+            $mol_assert_equal(app.titles(), ['🤓⏰ $mol_wire_solo', '😵⏰ $mol_wire_let', '😵🍔 SolidJS 1', '😵⏰ SolidJS 2', '😵🍔 @pravosleva/reactive-engine']);
             $mol_assert_equal(app.Case(3).sample().includes(`esm( 'solid-js@2' )`), true);
             $mol_assert_equal(app.Case(3).sample().includes(`$mol_assert_like( res,`), true);
         },
