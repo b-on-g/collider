@@ -167,12 +167,12 @@ namespace $ {
 
 	const engine_setup = [
 		`// https://www.npmjs.com/package/@pravosleva/reactive-engine`,
-		`const { ReactiveEngine } = esm( '@pravosleva/reactive-engine@3' )`,
+		`const { ReactiveEngine, deepEqual: equals } = esm( '@pravosleva/reactive-engine@3' )`,
 		`const engine = new ReactiveEngine`,
 		`const A = engine.signal( 0 )`,
 		`const B = engine.signal( 0 )`,
 		`const C = engine.computed( ()=> A.value%2 + B.value%2 )`,
-		`const D = engine.computed( ()=> numbers.map( i => ({ x: i + A.value%2 - B.value%2 }) ) )`,
+		`const D = engine.computed( ()=> numbers.map( i => ({ x: i + A.value%2 - B.value%2 }) ), { equals } )`,
 		`const E = engine.computed( ()=> hard( C.value + A.value + D.value[0].x, 'E' ) )`,
 		`const F = engine.computed( ()=> hard( D.value[2].x || B.value, 'F' ) )`,
 		`const G = engine.computed( ()=> C.value + ( C.value || E.value%2 ) + D.value[4].x + F.value )`,
