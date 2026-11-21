@@ -126,8 +126,8 @@ Headless Chrome 1234, macOS arm64, `--expose-gc`, 18–19.11.2026. Для $mol �
 | Вариант | шаг 1 | шаг 2 | всего |
 | --- | --- | --- | --- |
 | $mol | H | E, H | 3 |
+| `@pravosleva/reactive-engine` | H | E, H | 3 |
 | Solid 1 и 2 | E, H | E, H | 4 |
-| `@pravosleva/reactive-engine` | F, H | F, E, H | 5 |
 | Cruzo | F, E, J, H | E, F, J, H | 8 |
 
 ### `@pravosleva/reactive-engine`
@@ -142,7 +142,7 @@ engine.effect( ()=> { res.push( hard( G.value, 'H' ) ) } )
 engine.batch( ()=> { B.value = 1; A.value = 1 } )
 ```
 
-Ассерт проходит, а `E` в первом шаге пропускается, как в $mol. Медленнее всех из прошедших он потому, что каждый раз пересчитывает `F`. У `computed` нет опции `equals` (сигнатура `computed( fn, name? )`), поэтому `D` при каждом изменении отдаёт новый массив, и `F` видит его как новое значение. В Solid это закрывается `{ equals }`, в $mol встроенным `$mol_compare_deep`. Памяти он тратит столько же, сколько $mol: 3–9 байт на итерацию против 160–370 у Solid.
+(In progress...)
 
 ### Cruzo
 
