@@ -128,7 +128,6 @@
 	pack pair git \https://github.com/b-on-g/pair.git
 	pack rsdemo git \https://github.com/b-on-g/rsdemo.git
 	pack build2 git \https://github.com/b-on-g/build2.git
-	pack yard git \https://github.com/b-on-g/yard.git
 	pack zig git \https://github.com/b-on-g/zig.git
 	pack wire git \https://github.com/b-on-g/wire.git
 	pack brelok git \https://github.com/b-on-g/brelok.git
@@ -137,6 +136,7 @@
 	pack id git \https://github.com/b-on-g/id.git
 	pack passkey git \https://github.com/b-on-g/passkey.git
 	pack collider git \https://github.com/b-on-g/collider.git
+	pack molefy git \https://github.com/b-on-g/molefy.git
 \/hyoo
 	pack about git \https://github.com/hyoo-ru/about.hyoo.ru.git
 	pack artist git \https://github.com/hyoo-ru/artist.hyoo.ru.git
